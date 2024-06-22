@@ -5,7 +5,8 @@ import {
   updateClass,
   updateThumbnail,
 } from "../services/videoService";
-
+import VideoModal from "./Modal/VideoModal"; // Adjust path as necessary
+import { PlayIcon } from '@heroicons/react/outline';
 const classOptions = {
   1: "亚洲无码",
   2: "原创国产",
@@ -32,7 +33,8 @@ const VideoList = () => {
     height: 360,
   });
   const [successMessage, setSuccessMessage] = useState("");
-
+  const [playing, setPlaying] = useState(false); // State to manage video modal play
+  const [newThumbnailFiles, setNewThumbnailFiles] = useState({});
   useEffect(() => {
     fetchVideos();
   }, [page]);
@@ -67,10 +69,10 @@ const VideoList = () => {
     });
   };
 
-  const handleThumbnailChange = async (id) => {
-    await updateThumbnail(id, newThumbnail);
-    fetchVideos();
-  };
+  //const handleThumbnailChange = async (id) => {
+  //  await updateThumbnail(id, newThumbnail);
+  //  fetchVideos();
+  //};
 
   const handleBatchClassChange = async () => {
     await Promise.all(
@@ -115,41 +117,31 @@ const VideoList = () => {
   const handleResizeVideo = (width, height) => {
     setVideoPlayerSize({ width, height });
   };
+  const handleThumbnailChange = async (thumb) => {
+    const file = newThumbnailFiles[thumb];
+    if (!file) {
+      console.error("No file selected for thumbnail update.");
+      return;
+    }
+
+    await updateThumbnail(thumb, file);
+    fetchVideos();
+    setSuccessMessage("Cover page updated successfully.");
+    setTimeout(() => {
+      setSuccessMessage("");
+    }, 3000); 
+  };
+  const handleThumbnailFileChange = (thumb, file) => {
+    setNewThumbnailFiles({
+      ...newThumbnailFiles,
+      [thumb]: file,
+    });
+  };
+
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Video List</h1>
-
-      {videoPlayerVisible && (
-        <div className="mb-4 border border-gray-300 rounded-lg overflow-hidden">
-          <iframe
-            src={videoPlayerUrl}
-            width={videoPlayerSize.width}
-            height={videoPlayerSize.height}
-            frameBorder="0"
-            allowFullScreen
-            title="Video Player"
-          ></iframe>
-          <div className="flex justify-end p-2">
-            <button
-              onClick={() => stopVideo()}
-              className="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600"
-            >
-              Close Video
-            </button>
-            {videoPlayerUrl && (
-              <div className="ml-2">
-                <button
-                  onClick={() => handleResizeVideo(640, 360)}
-                  className="bg-blue-500 text-white px-2 py-1 rounded text-sm hover:bg-blue-600"
-                >
-                  Resize
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <h1 className="text-2xl font-bold mb-4">视频列表</h1>
 
       <div className="mb-4 flex justify-between">
         <button
@@ -157,7 +149,7 @@ const VideoList = () => {
           className="bg-red-500 text-white px-4 py-2 rounded text-sm hover:bg-red-600"
           disabled={selectedVideos.length === 0}
         >
-          Delete Selected
+          删除所选
         </button>
         <div className="flex items-center">
           <button
@@ -168,7 +160,7 @@ const VideoList = () => {
               Object.keys(newClassid).length === 0
             }
           >
-            Change All Class
+            更改所有类别
           </button>
         </div>
       </div>
@@ -191,7 +183,7 @@ const VideoList = () => {
               <title>Close</title>
               <path
                 fillRule="evenodd"
-                d="M2.293 2.293a1 1 0 011.414 0L10 8.586l6.293-6.293a1 1 0 111.414 1.414L11.414 10l6.293 6.293a1 1 0 01-1.414 1.414L10 11.414l-6.293 6.293a1 1 0 01-1.414-1.414L8.586 10 2.293 3.707a1 1 0 010-1.414z"
+                d="M2.293 2.293a1 1 0 011.414 0L10 8.586l6.293-6.293a1 1 0 011.414 1.414L11.414 10l6.293 6.293a1 1 0 01-1.414 1.414L10 11.414l-6.293 6.293a1 1 0 01-1.414-1.414L8.586 10 2.293 3.707a1 1 0 010-1.414z"
                 clipRule="evenodd"
               />
             </svg>
@@ -209,11 +201,11 @@ const VideoList = () => {
                 onChange={toggleSelectAll}
               />
             </th>
-            <th className="py-2 px-4 border-b">Title</th>
-            <th className="py-2 px-4 border-b">Thumbnail</th>
-            <th className="py-2 px-4 border-b">Video</th>
-            <th className="py-2 px-4 border-b">Upload Time</th>
-            <th className="py-2 px-4 border-b">Class ID</th>
+            <th className="py-2 px-4 border-b">标题</th>
+            <th className="py-2 px-4 border-b">缩略图</th>
+            <th className="py-2 px-4 border-b">视频</th>
+            <th className="py-2 px-4 border-b">上传时间</th>
+            <th className="py-2 px-4 border-b">班级名称</th>
           </tr>
         </thead>
         <tbody>
@@ -235,17 +227,17 @@ const VideoList = () => {
                 />
                 <div>
                   <input
-                    type="text"
-                    value={newThumbnail}
-                    onChange={(e) => setNewThumbnail(e.target.value)}
-                    placeholder="New Thumbnail URL"
+                    type="file"
+                    onChange={(e) =>
+                      handleThumbnailFileChange(video.thumb, e.target.files[0])
+                    }
                     className="border border-gray-300 rounded p-1 text-sm mt-2"
                   />
                   <button
-                    onClick={() => handleThumbnailChange(video.id)}
+                    onClick={() => handleThumbnailChange(video.thumb)}
                     className="bg-blue-500 text-white px-2 py-1 rounded text-sm mt-2 hover:bg-blue-600"
                   >
-                    Change Thumbnail
+                    更改封面
                   </button>
                 </div>
               </td>
@@ -254,13 +246,7 @@ const VideoList = () => {
                   onClick={() => playVideo(video.href)}
                   className="bg-green-500 text-white px-2 py-1 rounded text-sm mr-2 hover:bg-green-600"
                 >
-                  Play
-                </button>
-                <button
-                  onClick={stopVideo}
-                  className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600"
-                >
-                  Stop
+                  <PlayIcon className="w-5 h-5 mr-1" /> 玩
                 </button>
               </td>
               <td className="py-2 px-4 border-b">
@@ -303,6 +289,17 @@ const VideoList = () => {
           Next
         </button>
       </div>
+
+      {videoPlayerUrl && (
+        <VideoModal
+          url={videoPlayerUrl}
+          onClose={stopVideo}
+          size={videoPlayerSize}
+          onResize={handleResizeVideo}
+          playing={playing}
+          setPlaying={setPlaying}
+        />
+      )}
     </div>
   );
 };
