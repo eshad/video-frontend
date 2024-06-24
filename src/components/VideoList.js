@@ -61,17 +61,17 @@ const VideoList = () => {
       // Handle error as needed
     }
   };
-
+    
   const fetchVideos = async (page) => {
     try {
       const response = await getVideos(page);
       const { data, total_pages } = response.data;
 
-      if (page === 1) {
+      //if (page === 1) {
         setAllVideos(data);
-      } else {
-        setAllVideos((prevVideos) => [...prevVideos, ...data]);
-      }
+      //} else {
+       // setAllVideos((prevVideos) => [...prevVideos, ...data]);
+     // }
 
       setTotalPages(total_pages);
     } catch (error) {
@@ -94,8 +94,8 @@ const VideoList = () => {
       );
     }
     else{
-      return allVideos.filter((video) =>
-        video.title.toLowerCase().includes(searchQuery.toLowerCase())
+      return allVideos.filter((allvideo) =>
+        allvideo.title.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
     }
@@ -105,6 +105,7 @@ const VideoList = () => {
     await deleteVideos(selectedVideos);
     setSelectedVideos([]);
     fetchVideos(currentPage);
+    fetchAllVideos();
   };
 
   const handleClassChange = async (id, classid) => {
@@ -201,9 +202,14 @@ const VideoList = () => {
     setSelectedImage("");
   };
 
+//  const handlePageChange = (page) => {
+ //   setCurrentPage(page);
+  //};
   const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
+  //if (page > 0 && page <= totalPages) {
+    setCurrentPage(page); // Update the current page
+  //}
+};
 
   const filteredVideos = filterVideos();
 
