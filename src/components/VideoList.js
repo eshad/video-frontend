@@ -7,6 +7,8 @@ import {
 } from "../services/videoService";
 import VideoModal from "./Modal/VideoModal"; // Adjust path as necessary
 import { PlayIcon } from '@heroicons/react/outline';
+import Modal from 'react-modal'; // Add react-modal
+
 const classOptions = {
   1: "亚洲无码",
   2: "原创国产",
@@ -35,6 +37,9 @@ const VideoList = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [playing, setPlaying] = useState(false); // State to manage video modal play
   const [newThumbnailFiles, setNewThumbnailFiles] = useState({});
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false); // New state for image modal
+  const [selectedImage, setSelectedImage] = useState(""); // New state for selected image
+
   useEffect(() => {
     fetchVideos();
   }, [page]);
@@ -68,11 +73,6 @@ const VideoList = () => {
       return prevSelected;
     });
   };
-
-  //const handleThumbnailChange = async (id) => {
-  //  await updateThumbnail(id, newThumbnail);
-  //  fetchVideos();
-  //};
 
   const handleBatchClassChange = async () => {
     await Promise.all(
@@ -117,6 +117,7 @@ const VideoList = () => {
   const handleResizeVideo = (width, height) => {
     setVideoPlayerSize({ width, height });
   };
+
   const handleThumbnailChange = async (thumb) => {
     const file = newThumbnailFiles[thumb];
     if (!file) {
@@ -129,8 +130,9 @@ const VideoList = () => {
     setSuccessMessage("Cover page updated successfully.");
     setTimeout(() => {
       setSuccessMessage("");
-    }, 3000); 
+    }, 3000);
   };
+
   const handleThumbnailFileChange = (thumb, file) => {
     setNewThumbnailFiles({
       ...newThumbnailFiles,
@@ -138,6 +140,15 @@ const VideoList = () => {
     });
   };
 
+  const openImageModal = (imageUrl) => {
+    setSelectedImage(imageUrl);
+    setIsImageModalOpen(true);
+  };
+
+  const closeImageModal = () => {
+    setIsImageModalOpen(false);
+    setSelectedImage("");
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -223,12 +234,13 @@ const VideoList = () => {
                 <img
                   src={`${video.thumb}`}
                   alt="thumbnail"
-                  className="w-24 h-16 object-cover"
+                  className="w-32 h-24 object-cover cursor-pointer"
+                  onClick={() => openImageModal(video.thumb)} // Add onClick event
                 />
                 <div>
                   <input
                     type="file"
-                    onChange={(e) =>
+                                        onChange={(e) =>
                       handleThumbnailFileChange(video.thumb, e.target.files[0])
                     }
                     className="border border-gray-300 rounded p-1 text-sm mt-2"
@@ -244,7 +256,7 @@ const VideoList = () => {
               <td className="py-2 px-4 border-b">
                 <button
                   onClick={() => playVideo(video.href)}
-                  className="bg-green-500 text-white px-2 py-1 rounded text-sm mr-2 hover:bg-green-600"
+                  className="bg-green-500 text-white px-2 py-1 rounded text-sm mr-2 hover:bg-green-600 flex items-center"
                 >
                   <PlayIcon className="w-5 h-5 mr-1" /> 玩
                 </button>
@@ -300,6 +312,27 @@ const VideoList = () => {
           setPlaying={setPlaying}
         />
       )}
+
+      <Modal
+        isOpen={isImageModalOpen}
+        onRequestClose={closeImageModal}
+        contentLabel="Thumbnail Image"
+        className="flex items-center justify-center"
+      >
+        <div className="bg-white p-4 rounded-lg shadow-lg">
+          <img
+            src={selectedImage}
+            alt="thumbnail"
+            className="max-w-full max-h-full"
+          />
+          <button
+            onClick={closeImageModal}
+            className="bg-red-500 text-white px-4 py-2 rounded text-sm mt-2 hover:bg-red-600"
+          >
+            Close
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };
