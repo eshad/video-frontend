@@ -319,11 +319,11 @@ const VideoList = () => {
         contentLabel="Thumbnail Image"
         className="flex items-center justify-center"
       >
-        <div className="bg-white p-4 rounded-lg shadow-lg">
+        <div className="bg-black p-4 rounded-lg shadow-lg">
           <img
             src={selectedImage}
             alt="thumbnail"
-            className="max-w-full max-h-full"
+            className="max-w-[80%] max-h-[60%]"
           />
           <button
             onClick={closeImageModal}
