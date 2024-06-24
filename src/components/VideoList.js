@@ -3,11 +3,12 @@ import {
   getVideos,
   deleteVideos,
   updateClass,
+  getAllVideos,
   updateThumbnail,
 } from "../services/videoService";
-import VideoModal from "./Modal/VideoModal"; // Adjust path as necessary
-import { PlayIcon } from '@heroicons/react/outline';
-import Modal from 'react-modal'; // Add react-modal
+import VideoModal from "./Modal/VideoModal";
+import { PlayIcon } from "@heroicons/react/outline";
+import Modal from "react-modal";
 
 const classOptions = {
   1: "亚洲无码",
@@ -23,11 +24,12 @@ const classOptions = {
 };
 
 const VideoList = () => {
-  const [videos, setVideos] = useState([]);
-  const [page, setPage] = useState(1);
+  const [allVideos, setAllVideos] = useState([]); // Store current page's videos
+  const [videos, setVideos] = useState([]); // Store all videos
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [selectedVideos, setSelectedVideos] = useState([]);
   const [newClassid, setNewClassid] = useState({});
-  const [newThumbnail, setNewThumbnail] = useState("");
   const [videoPlayerUrl, setVideoPlayerUrl] = useState("");
   const [videoPlayerVisible, setVideoPlayerVisible] = useState(false);
   const [videoPlayerSize, setVideoPlayerSize] = useState({
@@ -35,29 +37,79 @@ const VideoList = () => {
     height: 360,
   });
   const [successMessage, setSuccessMessage] = useState("");
-  const [playing, setPlaying] = useState(false); // State to manage video modal play
+  const [playing, setPlaying] = useState(false);
   const [newThumbnailFiles, setNewThumbnailFiles] = useState({});
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false); // New state for image modal
-  const [selectedImage, setSelectedImage] = useState(""); // New state for selected image
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    fetchVideos();
-  }, [page]);
+    fetchVideos(currentPage);
+  }, [currentPage, searchQuery]);
 
-  const fetchVideos = async () => {
-    const response = await getVideos(page);
-    setVideos(response.data.data);
+  useEffect(() => {
+    fetchAllVideos();
+  }, []);
+
+  const fetchAllVideos = async () => {
+    try {
+      const response = await getAllVideos();
+      setVideos(response.data);
+    
+    } catch (error) {
+      console.error("Error fetching all videos:", error);
+      // Handle error as needed
+    }
   };
+
+  const fetchVideos = async (page) => {
+    try {
+      const response = await getVideos(page);
+      const { data, total_pages } = response.data;
+
+      if (page === 1) {
+        setAllVideos(data);
+      } else {
+        setAllVideos((prevVideos) => [...prevVideos, ...data]);
+      }
+
+      setTotalPages(total_pages);
+    } catch (error) {
+      console.error(`Error fetching videos for page ${page}:`, error);
+      // Handle error as needed
+    }
+  };
+
+ // const filterVideos = () => {
+ //   const normalizedSearch = searchQuery.toLowerCase().trim();
+ //   return videos.filter((video) =>
+ //     video.title.toLowerCase().includes(normalizedSearch)
+ //   );
+ // };
+  const filterVideos = () => {
+    //console.log(videos)
+    if(searchQuery){
+      return videos.filter((video) =>
+        video.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    else{
+      return allVideos.filter((video) =>
+        video.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+
+    }
+};
 
   const handleDelete = async () => {
     await deleteVideos(selectedVideos);
     setSelectedVideos([]);
-    fetchVideos();
+    fetchVideos(currentPage);
   };
 
   const handleClassChange = async (id, classid) => {
     await updateClass(id, classid);
-    fetchVideos();
+    fetchVideos(currentPage);
   };
 
   const handleNewClassidChange = (id, value) => {
@@ -65,7 +117,6 @@ const VideoList = () => {
       ...newClassid,
       [id]: value,
     });
-    // Automatically select the video when classid is changed
     setSelectedVideos((prevSelected) => {
       if (!prevSelected.includes(id)) {
         return [...prevSelected, id];
@@ -76,20 +127,20 @@ const VideoList = () => {
 
   const handleBatchClassChange = async () => {
     await Promise.all(
-      selectedVideos.map((id) => updateClass(id, newClassid[id])),
+      selectedVideos.map((id) => updateClass(id, newClassid[id]))
     );
-    fetchVideos();
+    fetchVideos(currentPage);
     setSuccessMessage("Class updated successfully.");
     setTimeout(() => {
       setSuccessMessage("");
-    }, 3000); // Clear success message after 3 seconds
+    }, 3000);
   };
 
   const toggleSelectAll = () => {
-    if (selectedVideos.length === videos.length) {
+    if (selectedVideos.length === allVideos.length) {
       setSelectedVideos([]);
     } else {
-      setSelectedVideos(videos.map((video) => video.id));
+      setSelectedVideos(allVideos.map((video) => video.id));
     }
   };
 
@@ -126,7 +177,7 @@ const VideoList = () => {
     }
 
     await updateThumbnail(thumb, file);
-    fetchVideos();
+    fetchVideos(currentPage);
     setSuccessMessage("Cover page updated successfully.");
     setTimeout(() => {
       setSuccessMessage("");
@@ -150,6 +201,12 @@ const VideoList = () => {
     setSelectedImage("");
   };
 
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const filteredVideos = filterVideos();
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">视频列表</h1>
@@ -167,8 +224,7 @@ const VideoList = () => {
             onClick={handleBatchClassChange}
             className="bg-blue-500 text-white px-4 py-2 rounded text-sm mr-2 hover:bg-blue-600"
             disabled={
-              selectedVideos.length === 0 ||
-              Object.keys(newClassid).length === 0
+              selectedVideos.length === 0 || Object.keys(newClassid).length === 0
             }
           >
             更改所有类别
@@ -194,7 +250,7 @@ const VideoList = () => {
               <title>Close</title>
               <path
                 fillRule="evenodd"
-                d="M2.293 2.293a1 1 0 011.414 0L10 8.586l6.293-6.293a1 1 0 011.414 1.414L11.414 10l6.293 6.293a1 1 0 01-1.414 1.414L10 11.414l-6.293 6.293a1 1 0 01-1.414-1.414L8.586 10 2.293 3.707a1 1 0 010-1.414z"
+                d="M9 18a9 9 0 100-18 9 9 0 000 18zm0-2a7 7 0 110-14 7 7 0 010 14zM8 9a1 1 0 011-1h6a1 1 0 110 2H9a1 1 0 01-1-1z"
                 clipRule="evenodd"
               />
             </svg>
@@ -202,13 +258,36 @@ const VideoList = () => {
         </div>
       )}
 
-      <table className="min-w-full bg-white border border-gray-200 table-auto">
+      <div className="relative mb-4">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="搜索视频标题..."
+          className="border border-gray-300 rounded p-2 w-[20%]"
+        />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5 text-gray-400 absolute right-3 top-3 cursor-pointer"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          onClick={() => setSearchQuery("")}
+        >
+          <path
+            fillRule="evenodd"
+            d="M9 18a9 9 0 100-18 9 9 0 000 18zm0-2a7 7 0 110-14 7 7 0 010 14zM8 9a1 1 0 011-1h6a1 1 0 110 2H9a1 1 0 01-1-1z"
+            clipRule="evenodd"
+          />
+        </svg>
+      </div>
+
+      <table className="min-w-full bg-white border-gray-200 table-auto">
         <thead>
           <tr>
             <th className="py-2 px-4 border-b">
               <input
                 type="checkbox"
-                checked={selectedVideos.length === videos.length}
+                checked={selectedVideos.length === filteredVideos.length}
                 onChange={toggleSelectAll}
               />
             </th>
@@ -220,7 +299,7 @@ const VideoList = () => {
           </tr>
         </thead>
         <tbody>
-          {videos.map((video) => (
+          {filteredVideos.map((video) => (
             <tr key={video.id} className="hover:bg-gray-100">
               <td className="py-2 px-4 border-b">
                 <input
@@ -235,12 +314,12 @@ const VideoList = () => {
                   src={`${video.thumb}`}
                   alt="thumbnail"
                   className="w-32 h-24 object-cover cursor-pointer"
-                  onClick={() => openImageModal(video.thumb)} // Add onClick event
+                  onClick={() => openImageModal(video.thumb)}
                 />
                 <div>
                   <input
                     type="file"
-                                        onChange={(e) =>
+                    onChange={(e) =>
                       handleThumbnailFileChange(video.thumb, e.target.files[0])
                     }
                     className="border border-gray-300 rounded p-1 text-sm mt-2"
@@ -258,7 +337,7 @@ const VideoList = () => {
                   onClick={() => playVideo(video.href)}
                   className="bg-green-500 text-white px-2 py-1 rounded text-sm mr-2 hover:bg-green-600 flex items-center"
                 >
-                  <PlayIcon className="w-5 h-5 mr-1" /> 玩
+                  <PlayIcon className="w-5 h-5 mr-1" /> 播放
                 </button>
               </td>
               <td className="py-2 px-4 border-b">
@@ -273,7 +352,7 @@ const VideoList = () => {
                   className="border border-gray-300 rounded p-1 text-sm"
                 >
                   <option value="" disabled>
-                    Select Class
+                    选择类别
                   </option>
                   {Object.entries(classOptions).map(([id, name]) => (
                     <option key={id} value={id}>
@@ -286,19 +365,21 @@ const VideoList = () => {
           ))}
         </tbody>
       </table>
+
       <div className="mt-4 flex justify-between">
         <button
-          onClick={() => setPage(page - 1)}
-          disabled={page === 1}
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
           className="bg-gray-500 text-white px-4 py-2 rounded text-sm mr-2 hover:bg-gray-600 disabled:bg-gray-300"
         >
-          Previous
+          上一页
         </button>
         <button
-          onClick={() => setPage(page + 1)}
-          className="bg-gray-500 text-white px-4 py-2 rounded text-sm hover:bg-gray-600"
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="bg-gray-500 text-white px-4 py-2 rounded text-sm hover:bg-gray-600 disabled:bg-gray-300"
         >
-          Next
+          下一页
         </button>
       </div>
 
@@ -307,7 +388,6 @@ const VideoList = () => {
           url={videoPlayerUrl}
           onClose={stopVideo}
           size={videoPlayerSize}
-          onResize={handleResizeVideo}
           playing={playing}
           setPlaying={setPlaying}
         />
@@ -329,7 +409,7 @@ const VideoList = () => {
             onClick={closeImageModal}
             className="bg-red-500 text-white px-4 py-2 rounded text-sm mt-2 hover:bg-red-600"
           >
-            Close
+            关闭
           </button>
         </div>
       </Modal>

@@ -6,6 +6,10 @@ export const getVideos = (page = 1) => {
   return axios.get(`${API_URL}/videos?page=${page}`);
 };
 
+export const getAllVideos = () =>{
+  return axios.get(`${API_URL}/allvideos`);
+};
+
 export const uploadVideos = (videos, images, classid) => {
   const formData = new FormData();
   videos.forEach((video) => formData.append("videos[]", video));
